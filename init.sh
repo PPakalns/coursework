@@ -17,7 +17,11 @@ echo "Extracting cats"
 unzip -n ../CAT_DATASET_01.zip -d ../cats -n
 unzip -n ../CAT_DATASET_02.zip -d ../cats -n
 
+# Error fix in dataset
+mv ../cats/CAT_00/00000003_019.jpg.cat ../cats/CAT_00/00000003_015.jpg.cat
+
 cat_dirs=("CAT_00" "CAT_01" "CAT_02" "CAT_03" "CAT_04")
+# CAT_05, CAT_06 paliks testēšanai
 
 rm -rf ../CAT
 mkdir -p ../CAT
@@ -31,4 +35,3 @@ done
 rm ../CAT/Thumbs.db
 
 echo "Great success!"
-# CAT_05, CAT_06 paliks testēšanai
