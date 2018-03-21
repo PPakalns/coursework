@@ -6,6 +6,9 @@ GEN_DIR := ../GEN
 TO_DIR := ../TO
 TS_DIR := ../TS
 
+DATATO := ../to.npy
+DATATS := ../ts.npy
+
 JPGS := $(wildcard ${CAT_DIR}/*.jpg)
 GJPGS := $(patsubst ${CAT_DIR}/%.jpg, ${GEN_DIR}/%.jpg, $(JPGS))
 
@@ -21,9 +24,17 @@ none:
 cleantrain:
 	rm ../TRAIN
 
+gen: directories ${GEN_DIR} $(GJPGS)
+
 gentrain: directories $(TOJPGS) $(TSJPGS)
 
-gen: directories ${GEN_DIR} $(GJPGS)
+gendata: gentrain ${DATATO} ${DATATS}
+
+$(DATATO): $(TOJPGS)
+	./prepare_data.py $(TO_DIR) $@
+
+$(DATATS): $(TSJPGS)
+	./prepare_data.py $(TS_DIR) $@
 
 $(GEN_DIR)/%.jpg: ${CAT_DIR}/%.jpg ${CAT_DIR}/%.jpg.cat
 	./draw_simple.py $< $(word 2,$^) $@
