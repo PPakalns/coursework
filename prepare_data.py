@@ -9,7 +9,7 @@ import numpy as np
 CatPoints = List[Tuple[int, int]]
 
 # Read cat file from dataset
-def readcat(catPath):
+def read_cat(catPath):
     p = []
     with open(catPath, "r") as f:
         inp = [int(x) for x in f.readline().split()]
@@ -37,7 +37,8 @@ def gen_img(imgfile: Path, p:CatPoints):
     return out
 
 
-def resizeImage(img:Image, p:CatPoints, size):
+# Resizes image to size and centers on nose
+def resize_image(img:Image, p:CatPoints, size):
     # Center on nose
     nx, ny = p[2]
 
@@ -58,6 +59,9 @@ def resizeImage(img:Image, p:CatPoints, size):
     return img
 
 
+# Reads images and cat files from "path" directory
+# Generates simple images and outputs npy arrays
+# to outs for simple images, to outd for detailed cat images
 def prepare_images(sizes:int, sized:int, path:Path, outs:Path, outd:Path):
     files = []
     for entry in path.iterdir():
@@ -74,12 +78,11 @@ def prepare_images(sizes:int, sized:int, path:Path, outs:Path, outd:Path):
         processed += 1
         if (processed & 0x3FF) == 0:
             print(f"\t{processed} / {len(files)}")
-        file:Path
-        catpoints = readcat(file.parent / (file.name + ".cat"))
+        catpoints = read_cat(file.parent / (file.name + ".cat"))
         simpleimg = gen_img(file, catpoints)
-        simpleimg = resizeImage(simpleimg, catpoints, sizes)
+        simpleimg = resize_image(simpleimg, catpoints, sizes)
         with Image.open(file) as img:
-            detailimg = resizeImage(img, catpoints, sized)
+            detailimg = resize_image(img, catpoints, sized)
         sdata.append(np.asarray(simpleimg, dtype="int32"))
         ddata.append(np.asarray(detailimg, dtype="int32"))
     print("Images processed")
@@ -90,6 +93,6 @@ def prepare_images(sizes:int, sized:int, path:Path, outs:Path, outd:Path):
 if __name__ == '__main__':
     if len(sys.argv) != 6:
         raise "Expected arguments: [size simple] [size detailed] [DIR] [out simple] [out detailed]"
-    sizes, sized, path, outs, outd = sys.argv
-    prepare_images(sizes, sized, Path(path), Path(outs), Path(outd))
+    _, sizes, sized, path, outs, outd = sys.argv
+    prepare_images(int(sizes), int(sized), Path(path), Path(outs), Path(outd))
 
