@@ -4,7 +4,7 @@ from nn import NN
 from keras import Model
 from keras.layers import Dense, Conv2D, Conv2DTranspose
 from keras.layers import Activation, Dropout, Input, Concatenate
-from keras.layers import UpSampling2D
+from keras.layers import UpSampling2D, Reshape, Flatten
 
 class CNN(NN):
 
@@ -30,7 +30,7 @@ class CNN(NN):
             t1 = Conv2D(filters, kernel, strides=1, padding='same')(t0)
             t2 = Activation('relu')(t1)
             t3 = Concatenate()([t2, skip_layer])
-            return t1
+            return t3
 
         depth = 4
 
@@ -39,7 +39,12 @@ class CNN(NN):
         d2 = downsample(d1, depth * 2)
         d3 = downsample(d2, depth * 4)
 
-        u1 = upsample(d3, d2, depth * 8)
+        m0 = Flatten()(d3)
+        m1 = Dense(8 * 8 * depth * 2)(m0)
+        m2 = Activation('tanh')(m1)
+        m3 = Reshape((8, 8, depth * 2))(m2)
+
+        u1 = upsample(m3, d2, depth * 8)
         u2 = upsample(u1, d1, depth * 4)
         u3 = upsample(u2, inp, depth * 4)
 
