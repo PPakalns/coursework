@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+import common
 from PIL import Image, ImageDraw
 
 if len(sys.argv) != 4:
@@ -8,14 +9,7 @@ if len(sys.argv) != 4:
 
 _, imgp, cat, outp = sys.argv
 
-p = []
-
-with open(cat, "r") as f:
-    inp = [int(x) for x in f.readline().split()]
-    cnt = inp[0]
-    assert(cnt == 9)
-    for i in range(9):
-        p.append((inp[1 + 2 * i], inp[2 + 2 * i]))
+p = common.readcat(cat)
 
 img = Image.open(imgp)
 
