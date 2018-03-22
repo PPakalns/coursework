@@ -13,6 +13,7 @@ class CNN(NN):
 
         # input image size
         self.size = size
+        self.depth = 8
 
 
     def generator(self):
@@ -33,7 +34,7 @@ class CNN(NN):
             t3 = Concatenate()([t2, skip_layer])
             return t3
 
-        depth = 4
+        depth = self.depth
 
         inp = Input(shape=(self.size, self.size, 1))
         d1 = downsample(inp, depth * 1)
