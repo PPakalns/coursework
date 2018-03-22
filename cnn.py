@@ -8,8 +8,8 @@ from keras.layers import UpSampling2D, Reshape, Flatten
 
 class CNN(NN):
 
-    def __init__(self, size=64):
-        NN.__init__(self)
+    def __init__(self, size=64, gray=False):
+        NN.__init__(self, gray=gray)
 
         # input image size
         self.size = size
@@ -17,6 +17,7 @@ class CNN(NN):
 
     def generator(self):
         if self.G:
+            self.G.summary()
             return self.G
 
         def downsample(input_layer, filters, kernel = 4, dropout = 0.1):
@@ -48,7 +49,7 @@ class CNN(NN):
         u2 = upsample(u1, d1, depth * 4)
         u3 = upsample(u2, inp, depth * 4)
 
-        lc = Conv2D(3, 4, strides=1, padding='same')(u3)
+        lc = Conv2D((1 if self.gray else 3), 4, strides=1, padding='same')(u3)
         output = Activation('tanh')(lc)
 
         self.G = Model(inp, output)
