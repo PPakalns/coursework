@@ -36,9 +36,9 @@ class GAN(CNN):
         m1 = Dense(self.size)(m0)
         m2 = Dropout(0.1)(m1)
         m3 = LeakyReLU(0.1)(m2)
-        b0 = BatchNormalization(momentum=0.8)(m3)
+        # b0 = BatchNormalization(momentum=0.8)(m3)
 
-        m4 = Dense(16)(b0)
+        m4 = Dense(16)(m3)
         m5 = Dropout(0.1)(m4)
         m6 = LeakyReLU(0.1)(m5)
 

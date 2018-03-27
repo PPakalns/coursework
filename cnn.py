@@ -45,8 +45,8 @@ class CNN(NN):
         d3 = downsample(d2, depth * 4)
 
         m0 = Flatten()(d3)
-        b0 = BatchNormalization(momentum=0.8)(m0)
-        m1 = Dense(8 * 8 * depth * 2)(b0)
+        # b0 = BatchNormalization(momentum=0.8)(m0)
+        m1 = Dense(8 * 8 * depth * 2)(m0)
         m2 = Activation('tanh')(m1)
         m3 = Reshape((8, 8, depth * 2))(m2)
 
