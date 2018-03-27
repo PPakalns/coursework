@@ -26,7 +26,7 @@ class GAN(CNN):
 
         depth = self.dis_depth
 
-        inp = Input((self.size, self.size, 1 if self.gray else 3))
+        inp = Input((self.size, self.size, (1 if self.gray else 3) + 1))
         d1 = cnn.downsample(inp, depth)     # 32
         d2 = cnn.downsample(d1, depth * 2)  # 16
         d3 = cnn.downsample(d2, depth * 4)  # 8
@@ -53,6 +53,9 @@ class GAN(CNN):
     def train(self, epochs, batch=32, save = 150):
         self.load_data()
 
+        if (batch % 4 != 0):
+            raise "Batch size must be multiple of 4"
+
         if self.G is None:
             raise "Initialize generator"
 
@@ -69,10 +72,12 @@ class GAN(CNN):
             metrics=['accuracy']
         )
 
-        simg = Input((self.size, self.size, 1 if self.gray else 3))
-
         self.D.trainable = False
-        self.combined = Model(simg, self.D(self.G(simg)))
+
+        simg = Input((self.size, self.size, 1))
+        discr = self.D(Concatenate()([self.G(simg), simg]))
+
+        self.combined = Model(simg, discr)
 
         self.combined.compile(
             loss='binary_crossentropy',
@@ -83,13 +88,21 @@ class GAN(CNN):
 
             # Discriminator
             idxs = np.random.randint(0, self.ddata.shape[0], batch // 2)
-            dimgs = self.ddata[idxs]
+            good_inp = np.concatenate([self.ddata[idxs], self.sdata[idxs]], axis=3)
 
-            idxs = np.random.randint(0, self.sdata.shape[0], batch // 2)
+            idxs = np.random.randint(0, self.sdata.shape[0], batch // 4)
             simgs = self.sdata[idxs]
             gimgs = self.G.predict(simgs)
+            bad_inp_1 = np.concatenate([gimgs, simgs], axis=3)
 
-            d_inp = np.concatenate((dimgs, gimgs))
+            idxs_1 = np.random.randint(0, self.ddata.shape[0], batch // 4)
+            idxs_2 = np.random.randint(0, self.ddata.shape[0], batch // 4)
+            simgs = self.sdata[idxs_1]
+            dimgs = self.ddata[idxs_2]
+            bad_inp_2 = np.concatenate([dimgs, simgs], axis=3)
+            bad_inp = np.concatenate([bad_inp_1, bad_inp_2], axis=0)
+
+            d_inp = np.concatenate((good_inp, bad_inp))
             d_out = np.concatenate((np.ones((batch // 2,)), np.zeros((batch // 2,))))
             d_out = np.reshape(d_out, (*d_out.shape, 1))
 
