@@ -43,10 +43,9 @@ class GAN(CNN):
         m6 = LeakyReLU(0.1)(m5)
 
         o0 = Dense(1)(m6)
-        o1 = Dropout(0.1)(o0)
-        o2 = Activation('sigmoid')(o1)
+        o1 = Activation('sigmoid')(o0)
 
-        self.D = Model(inp, o2)
+        self.D = Model(inp, o1)
         if not silent:
             self.D.summary()
         return self.D
