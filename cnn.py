@@ -4,18 +4,19 @@ from nn import NN
 from keras import Model
 from keras.layers import Dense, Conv2D, Conv2DTranspose
 from keras.layers import Activation, Dropout, Input, Concatenate
-from keras.layers import UpSampling2D, Reshape, Flatten
+from keras.layers import UpSampling2D, Reshape, Flatten, LeakyReLU
+from keras.layers import BatchNormalization
 
 def downsample(input_layer, filters, kernel = 4, dropout = 0.1):
     t0 = Conv2D(filters, kernel, strides=2, padding='same')(input_layer)
-    t1 = Activation('relu')(t0)
+    t1 = LeakyReLU(0.1)(t0)
     t2 = Dropout(dropout)(t1)
     return t2
 
 def upsample(input_layer, skip_layer, filters, kernel = 4):
     t0 = UpSampling2D()(input_layer)
     t1 = Conv2D(filters, kernel, strides=1, padding='same')(t0)
-    t2 = Activation('relu')(t1)
+    t2 = LeakyReLU(0.1)(t1)
     t3 = Concatenate()([t2, skip_layer])
     return t3
 
@@ -44,7 +45,8 @@ class CNN(NN):
         d3 = downsample(d2, depth * 4)
 
         m0 = Flatten()(d3)
-        m1 = Dense(8 * 8 * depth * 2)(m0)
+        b0 = BatchNormalization(momentum=0.8)(m0)
+        m1 = Dense(8 * 8 * depth * 2)(b0)
         m2 = Activation('tanh')(m1)
         m3 = Reshape((8, 8, depth * 2))(m2)
 

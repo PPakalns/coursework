@@ -37,8 +37,9 @@ class GAN(CNN):
         m1 = Dense(self.size)(m0)
         m2 = Dropout(0.1)(m1)
         m3 = LeakyReLU(0.1)(m2)
+        b0 = BatchNormalization(momentum=0.8)(m3)
 
-        m4 = Dense(16)(m3)
+        m4 = Dense(16)(b0)
         m5 = Dropout(0.1)(m4)
         m6 = LeakyReLU(0.1)(m5)
 
@@ -61,15 +62,12 @@ class GAN(CNN):
 
         optimizer = Adam()
 
+        self.D.trainable = True
+
         self.D.compile(
             loss='binary_crossentropy',
             optimizer=optimizer,
             metrics=['accuracy']
-        )
-
-        self.G.compile(
-            loss='binary_crossentropy',
-            optimizer=optimizer,
         )
 
         simg = Input((self.size, self.size, 1 if self.gray else 3))
@@ -114,22 +112,26 @@ class GAN(CNN):
                 self.show_img(epoch)
 
     def show_img(self, epoch):
-        cnt = 5
+        cnt = 3
         idxs = np.random.randint(0, self.sdata.shape[0], cnt)
         simg = self.sdata[idxs]
-        dimg = self.G.predict(simg)
+        dimg = self.ddata[idxs]
+        gimg = self.G.predict(simg)
 
         # Rescale images 0 - 1
         simg = simg * 0.5 + 0.5
-        dimg = dimg * 0.5 + 0.5
+        gimg = gimg * 0.5 + 0.5
 
-        fig, axs = plt.subplots(cnt, 2)
+        fig, axs = plt.subplots(cnt, 3)
         for i in range(cnt):
             axs[i,0].imshow(simg[i,:,:,0], cmap='gray')
             axs[i,0].axis('off')
-            show_dimg = dimg[i,:,:,0] if self.gray else dimg[i,:,:,:]
-            axs[i,1].imshow(show_dimg, cmap='gray' if self.gray else None)
+            show_gimg = gimg[i,:,:,0] if self.gray else gimg[i,:,:,:]
+            axs[i,1].imshow(show_gimg, cmap='gray' if self.gray else None)
             axs[i,1].axis('off')
+            show_dimg = dimg[i,:,:,0] if self.gray else dimg[i,:,:,:]
+            axs[i,2].imshow(show_dimg, cmap='gray' if self.gray else None)
+            axs[i,2].axis('off')
         timenow = datetime.now().strftime("%Y%m%d-%H%M%S")
         fig.savefig(f"../gan_{epoch}_{timenow}.png")
         plt.show()
