@@ -22,12 +22,12 @@ def upsample(input_layer, skip_layer, filters, kernel = 4):
 
 class CNN(NN):
 
-    def __init__(self, size=64, gray=False):
+    def __init__(self, size=64, gray=False, gen_depth=16):
         NN.__init__(self, gray=gray)
 
         # input image size
         self.size = size
-        self.depth = 8
+        self.gen_depth = gen_depth
         self.G = None
 
 
@@ -37,7 +37,7 @@ class CNN(NN):
                 self.G.summary()
             return self.G
 
-        depth = self.depth
+        depth = self.gen_depth
 
         inp = Input(shape=(self.size, self.size, 1))
         d1 = downsample(inp, depth * 1)

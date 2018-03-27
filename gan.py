@@ -13,10 +13,9 @@ from keras.layers import UpSampling2D, Reshape, Flatten, BatchNormalization
 
 class GAN(CNN):
 
-    def __init__(self, size=64, gray=False):
-        CNN.__init__(self, size=size, gray=gray)
-        self.size = size
-        self.depth = 4
+    def __init__(self, size=64, gray=False, gen_depth=16, dis_depth=2):
+        CNN.__init__(self, size=size, gray=gray, gen_depth=gen_depth)
+        self.dis_depth = dis_depth
         self.D = None
 
     def discriminator(self, silent=False):
@@ -25,7 +24,7 @@ class GAN(CNN):
                 self.D.summary()
             return self.D
 
-        depth = self.depth
+        depth = self.dis_depth
 
         inp = Input((self.size, self.size, 1 if self.gray else 3))
         d1 = cnn.downsample(inp, depth)     # 32
