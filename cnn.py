@@ -7,7 +7,7 @@ from keras.layers import Activation, Dropout, Input, Concatenate
 from keras.layers import UpSampling2D, Reshape, Flatten, LeakyReLU
 from keras.layers import BatchNormalization
 
-def downsample(input_layer, filters, kernel = 4, dropout = 0.1):
+def downsample(input_layer, filters, kernel = 4, dropout = 0.05):
     t0 = Conv2D(filters, kernel, strides=2, padding='same')(input_layer)
     t1 = LeakyReLU(0.1)(t0)
     t2 = Dropout(dropout)(t1)
@@ -47,10 +47,14 @@ class CNN(NN):
         m0 = Flatten()(d3)
         # b0 = BatchNormalization(momentum=0.8)(m0)
         m1 = Dense(8 * 8 * depth * 2)(m0)
-        m2 = Activation('tanh')(m1)
-        m3 = Reshape((8, 8, depth * 2))(m2)
+        m2 = Dropout(0.05)(m1)
+        m3 = Activation('relu')(m2)
+        m4 = Dense(8 * 8 * depth * 2)(m3)
+        m5 = Dropout(0.05)(m4)
+        m6 = Activation('sigmoid')(m5)
+        m7 = Reshape((8, 8, depth * 2))(m6)
 
-        u1 = upsample(m3, d2, depth * 8)
+        u1 = upsample(m7, d2, depth * 8)
         u2 = upsample(u1, d1, depth * 4)
         u3 = upsample(u2, inp, depth * 4)
 
