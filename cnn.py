@@ -6,6 +6,19 @@ from keras.layers import Dense, Conv2D, Conv2DTranspose
 from keras.layers import Activation, Dropout, Input, Concatenate
 from keras.layers import UpSampling2D, Reshape, Flatten
 
+def downsample(input_layer, filters, kernel = 4, dropout = 0.1):
+    t0 = Conv2D(filters, kernel, strides=2, padding='same')(input_layer)
+    t1 = Activation('relu')(t0)
+    t2 = Dropout(dropout)(t1)
+    return t2
+
+def upsample(input_layer, skip_layer, filters, kernel = 4):
+    t0 = UpSampling2D()(input_layer)
+    t1 = Conv2D(filters, kernel, strides=1, padding='same')(t0)
+    t2 = Activation('relu')(t1)
+    t3 = Concatenate()([t2, skip_layer])
+    return t3
+
 class CNN(NN):
 
     def __init__(self, size=64, gray=False):
@@ -14,25 +27,14 @@ class CNN(NN):
         # input image size
         self.size = size
         self.depth = 8
+        self.G = None
 
 
-    def generator(self):
+    def generator(self, silent=False):
         if self.G:
-            self.G.summary()
+            if not silent:
+                self.G.summary()
             return self.G
-
-        def downsample(input_layer, filters, kernel = 4, dropout = 0.1):
-            t0 = Conv2D(filters, kernel, strides=2, padding='same')(input_layer)
-            t1 = Activation('relu')(t0)
-            t2 = Dropout(dropout)(t1)
-            return t2
-
-        def upsample(input_layer, skip_layer, filters, kernel = 4):
-            t0 = UpSampling2D()(input_layer)
-            t1 = Conv2D(filters, kernel, strides=1, padding='same')(t0)
-            t2 = Activation('relu')(t1)
-            t3 = Concatenate()([t2, skip_layer])
-            return t3
 
         depth = self.depth
 
@@ -54,7 +56,8 @@ class CNN(NN):
         output = Activation('tanh')(lc)
 
         self.G = Model(inp, output)
-        self.G.summary()
+        if not silent:
+            self.G.summary()
         return self.G
 
 

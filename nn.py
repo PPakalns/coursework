@@ -17,13 +17,13 @@ class NN:
         if self.sdata is None:
             self.sdata, self.ddata = common.get_data()
             self.sdata = np.reshape(self.sdata, (*self.sdata.shape, 1))
-            self.sdata = (self.sdata / 255) - 0.5
-            self.ddata = (self.ddata / 255) - 0.5
+            self.sdata = (self.sdata / 127.5) - 1
+            self.ddata = (self.ddata / 127.5) - 1
             if self.gray:
+                self.ddata = (self.ddata + 1) / 2
                 self.ddata = np.asarray(rgb2gray(self.ddata))
-                self.ddata = self.ddata + 0.5
+                self.ddata = (self.ddata * 2) - 1
                 self.ddata = np.reshape(self.ddata, (*self.ddata.shape, 1))
-                self.ddata = self.ddata - 0.5
         return self.sdata, self.ddata
 
     def train(self, epochs=1):
