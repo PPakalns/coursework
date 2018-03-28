@@ -45,10 +45,10 @@ class CNN(NN):
         d3 = downsample(d2, depth * 4)
 
         m0 = Flatten()(d3)
-        # b0 = BatchNormalization(momentum=0.8)(m0)
-        m1 = Dense(8 * 8 * depth * 2)(m0)
+        b0 = BatchNormalization(momentum=0.8)(m0)
+        m1 = Dense(8 * 8 * depth * 2)(b0)
         m2 = Dropout(0.05)(m1)
-        m3 = Activation('relu')(m2)
+        m3 = LeakyReLU(0.1)(m2)
         m4 = Dense(8 * 8 * depth * 2)(m3)
         m5 = Dropout(0.05)(m4)
         m6 = Activation('sigmoid')(m5)
