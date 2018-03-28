@@ -34,13 +34,15 @@ class GAN(CNN):
 
         m0 = Flatten()(d4)
         m1 = Dense(self.size)(m0)
-        m2 = Dropout(0.2)(m1)
-        m3 = LeakyReLU(0.1)(m2)
-        # b0 = BatchNormalization(momentum=0.8)(m3)
+        m2 = LeakyReLU(0.1)(m1)
+        b0 = BatchNormalization(momentum=0.8)(m2)
+
+        m3 = Dropout(0.2)(b0)
 
         m4 = Dense(16)(m3)
-        m5 = Dropout(0.2)(m4)
-        m6 = LeakyReLU(0.1)(m5)
+        m5 = LeakyReLU(0.1)(m4)
+        b1 = BatchNormalization(momentum=0.8)(m5)
+        m6 = Dropout(0.2)(b1)
 
         o0 = Dense(1)(m6)
         o1 = Activation('sigmoid')(o0)
