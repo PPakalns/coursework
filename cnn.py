@@ -1,7 +1,6 @@
 
 from nn import NN
 
-import numpy as np
 from keras import Model
 from keras.layers import Dense, Conv2D, Conv2DTranspose
 from keras.layers import Activation, Dropout, Input, Concatenate
@@ -40,8 +39,7 @@ class CNN(NN):
 
         depth = self.gen_depth
 
-        # Simple image and random layer
-        inp = Input(shape=(self.size, self.size, 2))
+        inp = Input(shape=(self.size, self.size, 1))
         d1 = downsample(inp, depth * 1)
         d2 = downsample(d1, depth * 2)
         d3 = downsample(d2, depth * 4)
@@ -68,24 +66,5 @@ class CNN(NN):
             self.G.summary()
         return self.G
 
-    def train(self, epochs=1):
-        self.load_data()
-
-        self.G.compile(optimizer='rmsprop',
-                       loss='mean_squared_error',
-                       metrics=['accuracy'])
-
-        # Randomness
-        tdata = np.random.rand(*self.sdata)
-        # Concatenate
-        tdata = np.concatenate([self.sdata, tdata], axis=3)
-        # Fit
-        self.G.fit(tdata, self.ddata, epochs=epochs)
-
-        timenow = datetime.now().strftime("%Y%m%d-%H%M%S")
-        self.G.save(f"../model{timenow}.h5")
-
-    def load(self, h5path):
-        self.G = load_model(h5path)
 
 
