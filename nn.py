@@ -26,17 +26,3 @@ class NN:
                 self.ddata = np.reshape(self.ddata, (*self.ddata.shape, 1))
         return self.sdata, self.ddata
 
-    def train(self, epochs=1):
-        self.load_data()
-
-        self.G.compile(optimizer='rmsprop',
-                       loss='mean_squared_error',
-                       metrics=['accuracy'])
-
-        self.G.fit(self.sdata, self.ddata, epochs=epochs)
-
-        timenow = datetime.now().strftime("%Y%m%d-%H%M%S")
-        self.G.save(f"../model{timenow}.h5")
-
-    def load(self, h5path):
-        self.G = load_model(h5path)

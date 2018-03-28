@@ -10,6 +10,7 @@ from keras.optimizers import Adam
 from keras.layers import Dense, Conv2D, Conv2DTranspose, LeakyReLU
 from keras.layers import Activation, Dropout, Input, Concatenate
 from keras.layers import UpSampling2D, Reshape, Flatten, BatchNormalization
+from keras.layers import Lambda
 
 class GAN(CNN):
 
@@ -74,8 +75,17 @@ class GAN(CNN):
 
         self.D.trainable = False
 
-        simg = Input((self.size, self.size, 1))
-        discr = self.D(Concatenate()([self.G(simg), simg]))
+        simg = Input((self.size, self.size, 2))
+        def slice_layer(x):
+            return x[:,:,:,1:2]
+        discr = self.D(
+            Concatenate()(
+                [
+                    self.G(simg),
+                    Lambda(slice_layer)(simg)
+                ]
+            )
+        )
 
         self.combined = Model(simg, discr)
 
@@ -92,7 +102,8 @@ class GAN(CNN):
 
             idxs = np.random.randint(0, self.sdata.shape[0], batch // 4)
             simgs = self.sdata[idxs]
-            gimgs = self.G.predict(simgs)
+            rsimgs = np.concatenate([simgs, np.random.rand(*simgs.shape)], axis=3)
+            gimgs = self.G.predict(rsimgs)
             bad_inp_1 = np.concatenate([gimgs, simgs], axis=3)
 
             idxs_1 = np.random.randint(0, self.ddata.shape[0], batch // 4)
@@ -111,8 +122,9 @@ class GAN(CNN):
             # Generator
             idxs = np.random.randint(0, self.sdata.shape[0], batch)
             g_inp = self.sdata[idxs]
+            gr_inp = np.concatenate([g_inp, np.random.rand(*g_inp.shape)], axis=-1)
             g_out = np.ones((batch, 1))
-            g_loss = self.combined.train_on_batch(g_inp, g_out)
+            g_loss = self.combined.train_on_batch(gr_inp, g_out)
 
             print(f"{epoch}\tD: [loss: {d_loss[0]:.2f} acc: {d_loss[1]:.2f}]\tG: [loss: {g_loss:.2f}]")
 
@@ -128,7 +140,7 @@ class GAN(CNN):
         idxs = np.random.randint(0, self.sdata.shape[0], cnt)
         simg = self.sdata[idxs]
         dimg = self.ddata[idxs]
-        gimg = self.G.predict(simg)
+        gimg = self.G.predict(np.concatenate([simg, np.random.rand(*simg.shape)], axis=3))
 
         # Rescale images 0 - 1
         simg = simg * 0.5 + 0.5
