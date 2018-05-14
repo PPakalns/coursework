@@ -9,7 +9,7 @@ from keras.layers import BatchNormalization
 
 def downsample(input_layer, filters, kernel = 4, dropout = 0.05, norm=True):
     t0 = Conv2D(filters, kernel, strides=2, padding='same')(input_layer)
-    t1 = LeakyReLU(0.1)(t0)
+    t1 = LeakyReLU(0.2)(t0)
     if norm:
         t1 = BatchNormalization()(t1)
     t2 = Dropout(dropout)(t1)

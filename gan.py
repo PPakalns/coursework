@@ -8,7 +8,7 @@ from datetime import datetime
 from keras import Model
 from keras.optimizers import Adam
 from keras.layers import Dense, Conv2D, Conv2DTranspose, LeakyReLU
-from keras.layers import Activation, Dropout, Input, Concatenate
+from keras.layers import Activation, Dropout, Input, Concatenate, GaussianNoise
 from keras.layers import UpSampling2D, Reshape, Flatten, BatchNormalization
 
 class GAN(CNN):
@@ -77,7 +77,8 @@ class GAN(CNN):
         self.D.trainable = False
 
         simg = Input((self.size, self.size, 1))
-        discr = self.D(Concatenate()([self.G(simg), simg]))
+        gimg = GaussianNoise(0.5)(simg) # Add noise to input simple image
+        discr = self.D(Concatenate()([self.G(gimg), gimg]))
 
         self.combined = Model(simg, discr)
 
