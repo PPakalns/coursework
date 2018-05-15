@@ -7,7 +7,7 @@ from keras.layers import Activation, Dropout, Input, Concatenate
 from keras.layers import UpSampling2D, Reshape, Flatten, LeakyReLU
 from keras.layers import BatchNormalization
 
-def downsample(input_layer, filters, kernel = 4, dropout = 0.05, norm=True):
+def downsample(input_layer, filters, kernel = 4, dropout = 0.2, norm=True):
     t0 = Conv2D(filters, kernel, strides=2, padding='same')(input_layer)
     t1 = LeakyReLU(0.2)(t0)
     if norm:
@@ -46,7 +46,8 @@ class CNN(NN):
         depth = self.gen_depth
 
         inp = Input(shape=(self.size, self.size, 1))
-        d1 = downsample(inp, depth * 1, norm=False)
+        g1 = GaussianNoise(0.1)(inp)
+        d1 = downsample(g1, depth * 1, norm=False)
         d2 = downsample(d1, depth * 2)
         d3 = downsample(d2, depth * 4)
 

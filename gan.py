@@ -79,8 +79,7 @@ class GAN(CNN):
         self.D.trainable = False
 
         simg = Input((self.size, self.size, 1))
-        gimg = GaussianNoise(0.1)(simg) # Add noise to input simple image
-        discr = self.D(Concatenate()([self.G(gimg), gimg]))
+        discr = self.D(Concatenate()([self.G(simg), simg]))
 
         self.combined = Model(simg, discr)
 
