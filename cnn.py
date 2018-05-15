@@ -15,13 +15,16 @@ def downsample(input_layer, filters, kernel = 4, dropout = 0.05, norm=True):
     t2 = Dropout(dropout)(t1)
     return t2
 
-def upsample(input_layer, skip_layer, filters, kernel = 4):
+def upsample(input_layer, filters, skip_layer = None, kernel = 4, batch_normalization = True):
     t0 = UpSampling2D()(input_layer)
-    t1 = Conv2D(filters, kernel, strides=1, padding='same')(t0)
-    t2 = LeakyReLU(0.1)(t1)
-    t2 = BatchNormalization()(t2)
-    t3 = Concatenate()([t2, skip_layer])
-    return t3
+    t0 = Conv2D(filters, kernel, strides=1, padding='same')(t0)
+    if batch_normalization:
+        t0 = BatchNormalization()(t0)
+    t0 = Dropout(0.5)(t0)
+    t0 = LeakyReLU(0.2)(t0)
+    if skip_layer is not None:
+        t0 = Concatenate()([t0, skip_layer])
+    return t0
 
 class CNN(NN):
 
@@ -49,16 +52,16 @@ class CNN(NN):
 
         m0 = Flatten()(d3)
         m1 = Dense(8 * 8 * depth * 2)(m0)
-        m2 = Dropout(0.2)(m1)
-        m3 = LeakyReLU(0.1)(m2)
+        m2 = Dropout(0.5)(m1)
+        m3 = LeakyReLU(0.2)(m2)
         m4 = Dense(8 * 8 * depth * 2)(m3)
-        m5 = Dropout(0.2)(m4)
-        m6 = Activation('sigmoid')(m5)
+        m5 = Dropout(0.5)(m4)
+        m6 = Activation('relu')(m5)
         m7 = Reshape((8, 8, depth * 2))(m6)
 
-        u1 = upsample(m7, d2, depth * 8)
-        u2 = upsample(u1, d1, depth * 4)
-        u3 = upsample(u2, inp, depth * 4)
+        u1 = upsample(m7, depth * 8)
+        u2 = upsample(u1, depth * 4)
+        u3 = upsample(u2, depth * 4)
 
         lc = Conv2D((1 if self.gray else 3), 4, strides=1, padding='same')(u3)
         output = Activation('tanh')(lc)

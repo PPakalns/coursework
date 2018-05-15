@@ -27,22 +27,23 @@ class GAN(CNN):
         depth = self.dis_depth
 
         inp = Input((self.size, self.size, (1 if self.gray else 3) + 1))
-        d1 = cnn.downsample(inp, depth)     # 32
+        g1 = GaussianNoise(0.1)(inp)
+        d1 = cnn.downsample(g1, depth)     # 32
         d2 = cnn.downsample(d1, depth * 2)  # 16
         d3 = cnn.downsample(d2, depth * 4)  # 8
         d4 = cnn.downsample(d3, depth * 6)  # 4
 
         m0 = Flatten()(d4)
         m1 = Dense(self.size)(m0)
-        m2 = LeakyReLU(0.1)(m1)
+        m2 = LeakyReLU(0.2)(m1)
         b0 = BatchNormalization(momentum=0.8)(m2)
 
-        m3 = Dropout(0.2)(b0)
+        m3 = Dropout(0.5)(b0)
 
         m4 = Dense(16)(m3)
-        m5 = LeakyReLU(0.1)(m4)
+        m5 = LeakyReLU(0.2)(m4)
         b1 = BatchNormalization(momentum=0.8)(m5)
-        m6 = Dropout(0.2)(b1)
+        m6 = Dropout(0.5)(b1)
 
         o0 = Dense(1)(m6)
         o1 = Activation('sigmoid')(o0)
@@ -52,7 +53,7 @@ class GAN(CNN):
             self.D.summary()
         return self.D
 
-    def train(self, epochs, batch=32, save = 150):
+    def train(self, epochs, batch=32, save = 150, label_flipping=0.1):
         self.load_data()
 
         if (batch % 4 != 0):
@@ -64,27 +65,28 @@ class GAN(CNN):
         if self.D is None:
             raise "Initialize discriminator"
 
-        optimizer = Adam()
+        D_optimizer = Adam(0.0001)
+        G_optimizer = Adam(0.0001)
 
         self.D.trainable = True
 
         self.D.compile(
             loss='binary_crossentropy',
-            optimizer=optimizer,
+            optimizer=D_optimizer,
             metrics=['accuracy']
         )
 
         self.D.trainable = False
 
         simg = Input((self.size, self.size, 1))
-        gimg = GaussianNoise(0.5)(simg) # Add noise to input simple image
+        gimg = GaussianNoise(0.1)(simg) # Add noise to input simple image
         discr = self.D(Concatenate()([self.G(gimg), gimg]))
 
         self.combined = Model(simg, discr)
 
         self.combined.compile(
-            loss='binary_crossentropy',
-            optimizer=optimizer
+            loss='mae',
+            optimizer=G_optimizer
         )
 
         for epoch in range(1, 1 + epochs):
@@ -93,20 +95,16 @@ class GAN(CNN):
             idxs = np.random.randint(0, self.ddata.shape[0], batch // 2)
             good_inp = np.concatenate([self.ddata[idxs], self.sdata[idxs]], axis=3)
 
-            idxs = np.random.randint(0, self.sdata.shape[0], batch // 4)
+            idxs = np.random.randint(0, self.sdata.shape[0], batch // 2)
             simgs = self.sdata[idxs]
             gimgs = self.G.predict(simgs)
-            bad_inp_1 = np.concatenate([gimgs, simgs], axis=3)
-
-            idxs_1 = np.random.randint(0, self.ddata.shape[0], batch // 4)
-            idxs_2 = np.random.randint(0, self.ddata.shape[0], batch // 4)
-            simgs = self.sdata[idxs_1]
-            dimgs = self.ddata[idxs_2]
-            bad_inp_2 = np.concatenate([dimgs, simgs], axis=3)
-            bad_inp = np.concatenate([bad_inp_1, bad_inp_2], axis=0)
+            bad_inp = np.concatenate([gimgs, simgs], axis=3)
 
             d_inp = np.concatenate((good_inp, bad_inp))
-            d_out = np.concatenate((np.ones((batch // 2,)), np.zeros((batch // 2,))))
+            if label_flipping is not None:
+                d_out = np.concatenate((np.random.binomial(1, 1-label_flipping, (batch // 2,)), np.random.binomial(1, label_flipping, (batch // 2,))))
+            else:
+                d_out = np.concatenate((np.ones((batch // 2,)), np.zeros((batch // 2,))))
             d_out = np.reshape(d_out, (*d_out.shape, 1))
 
             d_loss = self.D.train_on_batch(d_inp, d_out)
@@ -120,11 +118,15 @@ class GAN(CNN):
             print(f"{epoch}\tD: [loss: {d_loss[0]:.2f} acc: {d_loss[1]:.2f}]\tG: [loss: {g_loss:.2f}]")
 
             if epoch % save == 0 or epoch == epochs:
-                timenow = datetime.now().strftime("%Y%m%d-%H%M%S")
-                self.G.save(f"../model_{timenow}_G.h5")
-                self.D.save(f"../model_{timenow}_D.h5")
-
                 self.show_img(epoch)
+
+
+    def save(self):
+        timenow = datetime.now().strftime("%Y%m%d-%H%M%S")
+        self.show_img("-")
+        self.G.save(f"../model_{timenow}_G.h5")
+        self.D.save(f"../model_{timenow}_D.h5")
+
 
     def show_img(self, epoch):
         cnt = 3
