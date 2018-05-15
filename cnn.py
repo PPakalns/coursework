@@ -5,7 +5,7 @@ from keras import Model
 from keras.layers import Dense, Conv2D, Conv2DTranspose
 from keras.layers import Activation, Dropout, Input, Concatenate
 from keras.layers import UpSampling2D, Reshape, Flatten, LeakyReLU
-from keras.layers import BatchNormalization
+from keras.layers import BatchNormalization, GaussianNoise
 
 def downsample(input_layer, filters, kernel = 4, dropout = 0.2, norm=True):
     t0 = Conv2D(filters, kernel, strides=2, padding='same')(input_layer)
