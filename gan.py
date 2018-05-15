@@ -138,8 +138,10 @@ class GAN(CNN):
         # Rescale images 0 - 1
         simg = simg * 0.5 + 0.5
         gimg = gimg * 0.5 + 0.5
+        dimg = dimg * 0.5 + 0.5
         np.clip(simg, 0, 1, out=simg)
         np.clip(gimg, 0, 1, out=gimg)
+        np.clip(dimg, 0, 1, out=dimg)
 
         fig, axs = plt.subplots(cnt, 3)
         for i in range(cnt):
