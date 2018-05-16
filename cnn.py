@@ -7,16 +7,18 @@ from keras.layers import Activation, Dropout, Input, Concatenate
 from keras.layers import UpSampling2D, Reshape, Flatten, LeakyReLU
 from keras.layers import BatchNormalization, GaussianNoise
 
-def downsample(input_layer, filters, kernel = 4, dropout = 0.2, norm=True):
-    t0 = Conv2D(filters, kernel, strides=2, padding='same')(input_layer)
-    t1 = LeakyReLU(0.2)(t0)
+def downsample(input_layer, filters, kernel = 4, dropout = 0.2, norm=True, strides=2):
+    t0 = Conv2D(filters, kernel, strides=strides, padding='same')(input_layer)
+    t0 = LeakyReLU(0.2)(t0)
     if norm:
-        t1 = BatchNormalization()(t1)
-    t2 = Dropout(dropout)(t1)
-    return t2
+        t0 = BatchNormalization()(t0)
+    t0 = Dropout(dropout)(t0)
+    return t0
 
-def upsample(input_layer, filters, skip_layer = None, kernel = 4, batch_normalization = True):
-    t0 = UpSampling2D()(input_layer)
+def upsample(input_layer, filters, skip_layer = None, kernel = 4, batch_normalization = True, upsample=True):
+    t0 = input_layer
+    if upsample:
+        t0 = UpSampling2D()(t0)
     t0 = Conv2D(filters, kernel, strides=1, padding='same')(t0)
     if batch_normalization:
         t0 = BatchNormalization()(t0)
@@ -46,26 +48,23 @@ class CNN(NN):
         depth = self.gen_depth
 
         inp = Input(shape=(self.size, self.size, 1))
-        g1 = GaussianNoise(0.1)(inp)
-        d1 = downsample(g1, depth * 1, norm=False)
-        d2 = downsample(d1, depth * 2)
-        d3 = downsample(d2, depth * 4)
+        l = GaussianNoise(0.1)(inp)
+        l = downsample(l, depth * 1, norm=False)
+        l = downsample(l, depth * 2, strides=1)
+        l = downsample(l, depth * 2)
+        l = downsample(l, depth * 4, strides=1)
+        l = downsample(l, depth * 4)
+        l = downsample(l, depth * 6)
+        l = upsample(l, depth * 6)
+        l = upsample(l, depth * 4)
+        l = upsample(l, depth * 4, upsample=False)
+        l = upsample(l, depth * 4)
+        l = upsample(l, depth * 4, upsample=False)
+        l = upsample(l, depth * 2)
+        l = upsample(l, depth * 1, upsample=False)
 
-        m0 = Flatten()(d3)
-        m1 = Dense(8 * 8 * depth * 2)(m0)
-        m2 = Dropout(0.5)(m1)
-        m3 = LeakyReLU(0.2)(m2)
-        m4 = Dense(8 * 8 * depth * 2)(m3)
-        m5 = Dropout(0.5)(m4)
-        m6 = Activation('relu')(m5)
-        m7 = Reshape((8, 8, depth * 2))(m6)
-
-        u1 = upsample(m7, depth * 8)
-        u2 = upsample(u1, depth * 4)
-        u3 = upsample(u2, depth * 4)
-
-        lc = Conv2D((1 if self.gray else 3), 4, strides=1, padding='same')(u3)
-        output = Activation('tanh')(lc)
+        l = Conv2D((1 if self.gray else 3), 4, strides=1, padding='same')(l)
+        output = Activation('tanh')(l)
 
         self.G = Model(inp, output)
         if not silent:
