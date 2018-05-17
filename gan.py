@@ -17,6 +17,7 @@ class GAN(CNN):
         CNN.__init__(self, size=size, gray=gray, gen_depth=gen_depth)
         self.dis_depth = dis_depth
         self.D = None
+        self.combined = None
 
     def discriminator(self, silent=False):
         if self.D:
@@ -54,31 +55,33 @@ class GAN(CNN):
         if self.D is None:
             raise "Initialize discriminator"
 
-        D_optimizer = Adam(0.0002, 0.5, 0.999)
-        G_optimizer = Adam(0.0002, 0.5, 0.999)
+        if self.combined is None:
+            D_optimizer = Adam(0.0002, 0.5, 0.999)
+            G_optimizer = Adam(0.0002, 0.5, 0.999)
 
-        self.D.trainable = True
+            self.D.trainable = True
 
-        self.D.compile(
-            loss='mae',
-            optimizer=D_optimizer,
-            metrics=['accuracy']
-        )
+            self.D.compile(
+                loss='mae',
+                optimizer=D_optimizer,
+                metrics=['binary_accuracy']
+            )
 
-        self.D.trainable = False
+            self.D.trainable = False
 
-        simg = Input((self.size, self.size, 1))
-        generated_image = self.G(simg)
-        discr = self.D(Concatenate()([generated_image, simg]))
+            simg = Input((self.size, self.size, 1))
+            generated_image = self.G(simg)
+            discr = self.D(Concatenate()([generated_image, simg]))
 
-        self.combined = Model(input=[simg], output=[generated_image, discr])
+            self.combined = Model(input=[simg], output=[generated_image, discr])
 
-        self.combined.compile(
-            loss=['mae', 'binary_crossentropy'],
-            loss_weights=[10, 1],
-            optimizer=G_optimizer
-        )
+            self.combined.compile(
+                loss=['mae', 'binary_crossentropy'],
+                loss_weights=[10, 1],
+                optimizer=G_optimizer
+            )
 
+        print(self.D.metrics_names, self.combined.metrics_names)
         for epoch in range(1, 1 + epochs):
 
             # Discriminator
@@ -106,7 +109,7 @@ class GAN(CNN):
             g_out = np.ones((batch, 1))
             g_loss = self.combined.train_on_batch(g_inp, [g_real, g_out])
 
-            print(f"{epoch}\tD: [loss: {d_loss[0]:.2f} acc: {d_loss[1]:.2f}]\tG: [loss: {g_loss:.2f}]")
+            print(f"{epoch}\tD: [loss: {d_loss[0]:.2f} binary_acc: {d_loss[1]:.2f}]\tG: [loss: {g_loss[0]:.2f} loss_mae: {g_loss[1]:.2f} loss_D: {g_loss[2]:.2f}]")
 
             if epoch % save == 0 or epoch == epochs:
                 self.show_img(epoch)
