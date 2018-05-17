@@ -7,7 +7,9 @@ from keras.layers import Activation, Dropout, Input, Concatenate
 from keras.layers import UpSampling2D, Reshape, Flatten, LeakyReLU
 from keras.layers import BatchNormalization, GaussianNoise
 
-def downsample(input_layer, filters, kernel = 4, dropout = 0.5, norm=True, strides=2):
+def_kernel = 3
+
+def downsample(input_layer, filters, kernel = def_kernel, dropout = 0.5, norm=True, strides=2):
     t0 = Conv2D(filters, kernel, strides=strides, padding='same')(input_layer)
     t0 = LeakyReLU(0.2)(t0)
     if norm:
@@ -15,7 +17,7 @@ def downsample(input_layer, filters, kernel = 4, dropout = 0.5, norm=True, strid
     t0 = Dropout(dropout)(t0)
     return t0
 
-def upsample(input_layer, filters, skip_layer = None, kernel = 4, batch_normalization = True, upsample=True):
+def upsample(input_layer, filters, skip_layer = None, kernel = def_kernel, batch_normalization = True, upsample=True):
     t0 = input_layer
     if upsample:
         t0 = UpSampling2D()(t0)
@@ -56,12 +58,15 @@ class CNN(NN):
         l = downsample(l, depth * 4)
         l4 = l
         l = downsample(l, depth * 4)
+        l5 = l
+        l = downsample(l, depth * 4)
+        l = upsample(l, depth * 4, l5)
         l = upsample(l, depth * 4, l4)
         l = upsample(l, depth * 4, l3)
         l = upsample(l, depth * 4, l2)
         l = upsample(l, depth * 2, l1)
 
-        l = Conv2D((1 if self.gray else 3), 4, strides=1, padding='same')(l)
+        l = Conv2D((1 if self.gray else 3), def_kernel, strides=1, padding='same')(l)
         output = Activation('tanh')(l)
 
         self.G = Model(inp, output)
