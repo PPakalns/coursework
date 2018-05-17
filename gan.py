@@ -34,7 +34,7 @@ class GAN(CNN):
 
         m0 = Flatten()(d4)
 
-        o0 = Dense(1)(m6)
+        o0 = Dense(1)(m0)
         o1 = Activation('sigmoid')(o0)
 
         self.D = Model(inp, o1)
