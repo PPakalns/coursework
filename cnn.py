@@ -48,19 +48,18 @@ class CNN(NN):
         depth = self.gen_depth
 
         inp = Input(shape=(self.size, self.size, 1))
+        l1 = inp
         l = downsample(inp, depth * 1, norm=False)
-        l = downsample(l, depth * 2, strides=1)
+        l2 = l
         l = downsample(l, depth * 2)
-        l = downsample(l, depth * 4, strides=1)
+        l3 = l
         l = downsample(l, depth * 4)
+        l4 = l
         l = downsample(l, depth * 4)
-        l = upsample(l, depth * 4)
-        l = upsample(l, depth * 4)
-        l = upsample(l, depth * 4, upsample=False)
-        l = upsample(l, depth * 4)
-        l = upsample(l, depth * 4, upsample=False)
-        l = upsample(l, depth * 2)
-        l = upsample(l, depth * 1, upsample=False)
+        l = upsample(l, depth * 4, l4)
+        l = upsample(l, depth * 4, l3)
+        l = upsample(l, depth * 4, l2)
+        l = upsample(l, depth * 2, l1)
 
         l = Conv2D((1 if self.gray else 3), 4, strides=1, padding='same')(l)
         output = Activation('tanh')(l)

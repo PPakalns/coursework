@@ -62,7 +62,7 @@ class GAN(CNN):
             self.D.trainable = True
 
             self.D.compile(
-                loss='mae',
+                loss='binary_crossentropy',
                 optimizer=D_optimizer,
                 metrics=['binary_accuracy']
             )
@@ -73,7 +73,7 @@ class GAN(CNN):
             generated_image = self.G(simg)
             discr = self.D(Concatenate()([generated_image, simg]))
 
-            self.combined = Model(input=[simg], output=[generated_image, discr])
+            self.combined = Model(inputs=[simg], outputs=[generated_image, discr])
 
             self.combined.compile(
                 loss=['mae', 'binary_crossentropy'],
@@ -109,7 +109,7 @@ class GAN(CNN):
             g_out = np.ones((batch, 1))
             g_loss = self.combined.train_on_batch(g_inp, [g_real, g_out])
 
-            print(f"{epoch}\tD: [loss: {d_loss[0]:.2f} binary_acc: {d_loss[1]:.2f}]\tG: [loss: {g_loss[0]:.2f} loss_mae: {g_loss[1]:.2f} loss_D: {g_loss[2]:.2f}]")
+            print(f"{epoch}\tD: [loss: {d_loss[0]:.4f} binary_acc: {d_loss[1]:.2f}]\tG: [loss: {g_loss[0]:.2f} loss_mae: {g_loss[1]:.2f} loss_D: {g_loss[2]:.6f}]")
 
             if epoch % save == 0 or epoch == epochs:
                 self.show_img(epoch)
