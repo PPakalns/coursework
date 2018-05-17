@@ -27,23 +27,12 @@ class GAN(CNN):
         depth = self.dis_depth
 
         inp = Input((self.size, self.size, (1 if self.gray else 3) + 1))
-        g1 = GaussianNoise(0.1)(inp)
-        d1 = cnn.downsample(g1, depth)     # 32
+        d1 = cnn.downsample(inp, depth, norm=False)     # 32
         d2 = cnn.downsample(d1, depth * 2)  # 16
         d3 = cnn.downsample(d2, depth * 4)  # 8
-        d4 = cnn.downsample(d3, depth * 6)  # 4
+        d4 = cnn.downsample(d3, depth * 8)  # 4
 
         m0 = Flatten()(d4)
-        m1 = Dense(self.size)(m0)
-        m2 = LeakyReLU(0.2)(m1)
-        b0 = BatchNormalization(momentum=0.8)(m2)
-
-        m3 = Dropout(0.5)(b0)
-
-        m4 = Dense(16)(m3)
-        m5 = LeakyReLU(0.2)(m4)
-        b1 = BatchNormalization(momentum=0.8)(m5)
-        m6 = Dropout(0.5)(b1)
 
         o0 = Dense(1)(m6)
         o1 = Activation('sigmoid')(o0)
@@ -65,13 +54,13 @@ class GAN(CNN):
         if self.D is None:
             raise "Initialize discriminator"
 
-        D_optimizer = Adam(0.0001)
-        G_optimizer = Adam(0.0001)
+        D_optimizer = Adam(0.0002, 0.5, 0.999)
+        G_optimizer = Adam(0.0002, 0.5, 0.999)
 
         self.D.trainable = True
 
         self.D.compile(
-            loss='binary_crossentropy',
+            loss='mae',
             optimizer=D_optimizer,
             metrics=['accuracy']
         )
@@ -79,12 +68,14 @@ class GAN(CNN):
         self.D.trainable = False
 
         simg = Input((self.size, self.size, 1))
-        discr = self.D(Concatenate()([self.G(simg), simg]))
+        generated_image = self.G(simg)
+        discr = self.D(Concatenate()([generated_image, simg]))
 
-        self.combined = Model(simg, discr)
+        self.combined = Model(input=[simg], output=[generated_image, discr])
 
         self.combined.compile(
-            loss='mae',
+            loss=['mae', 'binary_crossentropy'],
+            loss_weights=[10, 1],
             optimizer=G_optimizer
         )
 
@@ -111,8 +102,9 @@ class GAN(CNN):
             # Generator
             idxs = np.random.randint(0, self.sdata.shape[0], batch)
             g_inp = self.sdata[idxs]
+            g_real = self.ddata[idxs]
             g_out = np.ones((batch, 1))
-            g_loss = self.combined.train_on_batch(g_inp, g_out)
+            g_loss = self.combined.train_on_batch(g_inp, [g_real, g_out])
 
             print(f"{epoch}\tD: [loss: {d_loss[0]:.2f} acc: {d_loss[1]:.2f}]\tG: [loss: {g_loss:.2f}]")
 
