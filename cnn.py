@@ -50,26 +50,28 @@ class CNN(NN):
         depth = self.gen_depth
 
         inp = Input(shape=(self.size, self.size, 1))
-        l1 = inp
-        l = downsample(inp, depth * 1, norm=False)
+        inp2 = Input(shape=(8, 8, 1))
+        l = GaussianNoise(0.5)(inp)
+        l = downsample(l, depth * 1, norm=False) #64
         l2 = l
-        l = downsample(l, depth * 2)
+        l = downsample(l, depth * 2) #32
         l3 = l
-        l = downsample(l, depth * 4)
+        l = downsample(l, depth * 4) #16
         l4 = l
-        l = downsample(l, depth * 4)
+        l = downsample(l, depth * 4) #8
+        l = Concatenate()([l, inp2])
         l5 = l
-        l = downsample(l, depth * 4)
+        l = downsample(l, depth * 4) #4
         l = upsample(l, depth * 4, l5)
         l = upsample(l, depth * 4, l4)
         l = upsample(l, depth * 4, l3)
         l = upsample(l, depth * 4, l2)
-        l = upsample(l, depth * 2, l1)
+        l = upsample(l, depth * 2)
 
         l = Conv2D((1 if self.gray else 3), def_kernel, strides=1, padding='same')(l)
         output = Activation('tanh')(l)
 
-        self.G = Model(inp, output)
+        self.G = Model([inp, inp2], output)
         if not silent:
             self.G.summary()
         return self.G
