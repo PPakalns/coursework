@@ -9,7 +9,7 @@ from keras import Model
 from keras.optimizers import Adam
 from keras.layers import Dense, Conv2D, Conv2DTranspose, LeakyReLU
 from keras.layers import Activation, Dropout, Input, Concatenate, GaussianNoise
-from keras.layers import UpSampling2D, Reshape, Flatten, BatchNormalization
+from keras.layers import UpSampling2D, Reshape, Flatten
 
 class GAN(CNN):
 
@@ -64,15 +64,14 @@ class GAN(CNN):
             self.G.trainable = True
 
             simg = Input((self.size, self.size, 1))
-            rw = Input((8, 8, 1))
-            generated_image = self.G([simg, rw])
+            generated_image = self.G(simg)
             discr = self.D(Concatenate()([generated_image, simg]))
 
-            self.combined = Model(inputs=[simg, rw], outputs=[generated_image, discr])
+            self.combined = Model(inputs=simg, outputs=[generated_image, discr])
 
             self.combined.compile(
                 loss=['mae', 'binary_crossentropy'],
-                loss_weights=[1, 1],
+                loss_weights=[100, 1],
                 optimizer=G_optimizer
             )
 
@@ -82,10 +81,9 @@ class GAN(CNN):
             self.G.trainable = False
             
             ssimg = Input((self.size, self.size, 1))
-            srw = Input((8, 8, 1))
-            ggimg = self.G([ssimg, srw])
+            ggimg = self.G(ssimg)
             ddd = self.D(Concatenate()([ggimg, ssimg]))
-            self.combinedRev = Model(inputs=[ssimg, srw], outputs=[ddd])
+            self.combinedRev = Model(inputs=ssimg, outputs=[ddd])
 
             self.combinedRev.compile(
                 loss='binary_crossentropy',
@@ -109,7 +107,6 @@ class GAN(CNN):
 
             idxs = np.random.randint(0, self.sdata.shape[0], batch // 2)
             bad_inp = self.sdata[idxs]
-            bad_rand = np.random.rand(bad_inp.shape[0], 8, 8, 1)
 
             if label_flipping is not None:
                 d_good = np.random.binomial(1, 1-label_flipping, (batch // 2,))
@@ -121,16 +118,15 @@ class GAN(CNN):
             d_bad = np.reshape(d_bad, (*d_bad.shape, 1))
 
             d_lossg = self.D.train_on_batch(good_inp, d_good)
-            d_lossb = self.combinedRev.train_on_batch([bad_inp, bad_rand], d_bad)
+            d_lossb = self.combinedRev.train_on_batch(bad_inp, d_bad)
             d_loss = [((d_lossg[x] + d_lossb[x]) / 2) for x in range(len(d_lossb))]
 
             # Generator
             idxs = np.random.randint(0, self.sdata.shape[0], batch)
             g_inp = self.sdata[idxs]
-            g_rand = np.random.rand(g_inp.shape[0], 8, 8, 1)
             g_real = self.ddata[idxs]
             g_out = np.ones((batch, 1))
-            g_loss = self.combined.train_on_batch([g_inp, g_rand], [g_real, g_out])
+            g_loss = self.combined.train_on_batch(g_inp, [g_real, g_out])
 
             print(f"{epoch}\tD: [loss: {d_loss[0]:.4f} binary_acc: {d_loss[1]:.2f}]\tG: [loss: {g_loss[0]:.2f} loss_mae: {g_loss[1]:.2f} loss_D: {g_loss[2]:.6f}]")
 
@@ -146,13 +142,12 @@ class GAN(CNN):
 
 
     def show_img(self, epoch):
-        cnt = 3
+        cnt = 5
         idxs = np.random.randint(0, self.sdata.shape[0], cnt)
         simg = self.sdata[idxs]
-        srand = np.random.rand(simg.shape[0], 8, 8, 1)
-        pimg = simg + np.random.normal(scale=0.5, size=simg.shape)
+        pimg = simg # + np.random.normal(scale=0.5, size=simg.shape)
         dimg = self.ddata[idxs]
-        gimg = self.G.predict([pimg, srand])
+        gimg = self.G.predict(pimg)
 
         # Rescale images 0 - 1
         simg = simg * 0.5 + 0.5
@@ -162,22 +157,19 @@ class GAN(CNN):
         np.clip(gimg, 0, 1, out=gimg)
         np.clip(dimg, 0, 1, out=dimg)
 
-        fig, axs = plt.subplots(cnt, 5)
+        fig, axs = plt.subplots(cnt, 4)
         for i in range(cnt):
-            axs[i,0].imshow(srand[i,:,:,0], cmap='gray')
+            axs[i,0].imshow(simg[i,:,:,0], cmap='gray')
             axs[i,0].axis('off')
-            axs[i,1].imshow(simg[i,:,:,0], cmap='gray')
+            axs[i,1].imshow(pimg[i,:,:,0], cmap='gray')
             axs[i,1].axis('off')
-            axs[i,2].imshow(pimg[i,:,:,0], cmap='gray')
-            axs[i,2].axis('off')
             show_gimg = gimg[i,:,:,0] if self.gray else gimg[i,:,:,:]
-            axs[i,3].imshow(show_gimg, cmap='gray' if self.gray else None)
-            axs[i,3].axis('off')
+            axs[i,2].imshow(show_gimg, cmap='gray' if self.gray else None)
+            axs[i,2].axis('off')
             show_dimg = dimg[i,:,:,0] if self.gray else dimg[i,:,:,:]
-            axs[i,4].imshow(show_dimg, cmap='gray' if self.gray else None)
-            axs[i,4].axis('off')
+            axs[i,3].imshow(show_dimg, cmap='gray' if self.gray else None)
+            axs[i,3].axis('off')
         timenow = datetime.now().strftime("%Y%m%d-%H%M%S")
         fig.savefig(f"../gan_{epoch}_{timenow}.png")
-        plt.show()
 
 

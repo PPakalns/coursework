@@ -7,24 +7,24 @@ from keras.layers import Activation, Dropout, Input, Concatenate
 from keras.layers import UpSampling2D, Reshape, Flatten, LeakyReLU
 from keras.layers import BatchNormalization, GaussianNoise
 
-def_kernel = 3
+def_kernel = 4
 
 def downsample(input_layer, filters, kernel = def_kernel, dropout = 0.5, norm=True, strides=2):
     t0 = Conv2D(filters, kernel, strides=strides, padding='same')(input_layer)
     t0 = LeakyReLU(0.2)(t0)
     if norm:
         t0 = BatchNormalization()(t0)
-    t0 = Dropout(dropout)(t0)
+    t0 = Dropout(dropout)(t0, training=True)
     return t0
 
-def upsample(input_layer, filters, skip_layer = None, kernel = def_kernel, batch_normalization = True, upsample=True):
+def upsample(input_layer, filters, skip_layer = None, kernel = def_kernel, norm = True, upsample=True):
     t0 = input_layer
     if upsample:
         t0 = UpSampling2D()(t0)
     t0 = Conv2D(filters, kernel, strides=1, padding='same')(t0)
-    if batch_normalization:
+    if norm:
         t0 = BatchNormalization()(t0)
-    t0 = Dropout(0.5)(t0)
+    t0 = Dropout(0.5)(t0, training=True)
     t0 = LeakyReLU(0.2)(t0)
     if skip_layer is not None:
         t0 = Concatenate()([t0, skip_layer])
@@ -50,16 +50,15 @@ class CNN(NN):
         depth = self.gen_depth
 
         inp = Input(shape=(self.size, self.size, 1))
-        inp2 = Input(shape=(8, 8, 1))
-        l = GaussianNoise(0.5)(inp)
-        l = downsample(l, depth * 1, norm=False) #64
+        # l = GaussianNoise(0.5)(inp)
+        l = inp
+        l = downsample(l, depth * 1, kernel=5, norm=False) #64
         l2 = l
         l = downsample(l, depth * 2) #32
         l3 = l
         l = downsample(l, depth * 4) #16
         l4 = l
         l = downsample(l, depth * 4) #8
-        l = Concatenate()([l, inp2])
         l5 = l
         l = downsample(l, depth * 4) #4
         l = upsample(l, depth * 4, l5)
@@ -71,7 +70,7 @@ class CNN(NN):
         l = Conv2D((1 if self.gray else 3), def_kernel, strides=1, padding='same')(l)
         output = Activation('tanh')(l)
 
-        self.G = Model([inp, inp2], output)
+        self.G = Model(inp, output)
         if not silent:
             self.G.summary()
         return self.G

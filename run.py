@@ -8,7 +8,7 @@ mpl.use('Agg')
 import gan
 import keras
 import time
-g = gan.GAN(gray=False, size=128, dis_depth=64, gen_depth=128)
+g = gan.GAN(gray=False, size=128, dis_depth=32, gen_depth=128)
 
 g.generator(silent=True)
 g.discriminator(silent=True)
@@ -35,7 +35,7 @@ if len(sys.argv) > 1:
     time.sleep(1)
 
 try:
-    g.train(1000000, batch=16, save=50, label_flipping=0.01)
+    g.train(1000000, batch=2, save=100, label_flipping=None)
 finally:
     g.save()
 
