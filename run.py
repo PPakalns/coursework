@@ -7,8 +7,9 @@ mpl.use('Agg')
 
 import gan
 import keras
+from keras_contrib.layers import InstanceNormalization
 import time
-g = gan.GAN(gray=False, size=128, dis_depth=32, gen_depth=128)
+g = gan.GAN(gray=False, size=128, dis_depth=64, gen_depth=128)
 
 g.generator(silent=True)
 g.discriminator(silent=True)

@@ -71,7 +71,7 @@ class GAN(CNN):
 
             self.combined.compile(
                 loss=['mae', 'binary_crossentropy'],
-                loss_weights=[100, 1],
+                loss_weights=[20, 1],
                 optimizer=G_optimizer
             )
 
@@ -145,9 +145,9 @@ class GAN(CNN):
         cnt = 5
         idxs = np.random.randint(0, self.sdata.shape[0], cnt)
         simg = self.sdata[idxs]
-        pimg = simg # + np.random.normal(scale=0.5, size=simg.shape)
+        # pimg = simg # + np.random.normal(scale=0.5, size=simg.shape)
         dimg = self.ddata[idxs]
-        gimg = self.G.predict(pimg)
+        gimg = self.G.predict(simg)
 
         # Rescale images 0 - 1
         simg = simg * 0.5 + 0.5
@@ -157,19 +157,22 @@ class GAN(CNN):
         np.clip(gimg, 0, 1, out=gimg)
         np.clip(dimg, 0, 1, out=dimg)
 
-        fig, axs = plt.subplots(cnt, 4)
+        def hideTicks(fig):
+            fig.axes.get_xaxis().set_ticks([])
+            fig.axes.get_yaxis().set_ticks([])
+
+        fig, axs = plt.subplots(3, cnt)
         for i in range(cnt):
-            axs[i,0].imshow(simg[i,:,:,0], cmap='gray')
-            axs[i,0].axis('off')
-            axs[i,1].imshow(pimg[i,:,:,0], cmap='gray')
-            axs[i,1].axis('off')
+            axs[0,i].imshow(simg[i,:,:,0], cmap='gray')
             show_gimg = gimg[i,:,:,0] if self.gray else gimg[i,:,:,:]
-            axs[i,2].imshow(show_gimg, cmap='gray' if self.gray else None)
-            axs[i,2].axis('off')
+            axs[1,i].imshow(show_gimg, cmap='gray' if self.gray else None)
             show_dimg = dimg[i,:,:,0] if self.gray else dimg[i,:,:,:]
-            axs[i,3].imshow(show_dimg, cmap='gray' if self.gray else None)
-            axs[i,3].axis('off')
+            axs[2,i].imshow(show_dimg, cmap='gray' if self.gray else None)
+            for j in range(3):
+                hideTicks(axs[j,i])
+        plt.subplots_adjust(wspace=0.02,hspace=0.02)
         timenow = datetime.now().strftime("%Y%m%d-%H%M%S")
-        fig.savefig(f"../gan_{epoch}_{timenow}.png")
+        fig.savefig(f"../gan_{epoch}_{timenow}.png", bbox_inches='tight')
+        plt.close(fig)
 
 

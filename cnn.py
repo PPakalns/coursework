@@ -6,6 +6,7 @@ from keras.layers import Dense, Conv2D, Conv2DTranspose
 from keras.layers import Activation, Dropout, Input, Concatenate
 from keras.layers import UpSampling2D, Reshape, Flatten, LeakyReLU
 from keras.layers import BatchNormalization, GaussianNoise
+from keras_contrib.layers import InstanceNormalization
 
 def_kernel = 4
 
@@ -13,7 +14,7 @@ def downsample(input_layer, filters, kernel = def_kernel, dropout = 0.5, norm=Tr
     t0 = Conv2D(filters, kernel, strides=strides, padding='same')(input_layer)
     t0 = LeakyReLU(0.2)(t0)
     if norm:
-        t0 = BatchNormalization()(t0)
+        t0 = InstanceNormalization()(t0)
     t0 = Dropout(dropout)(t0, training=True)
     return t0
 
@@ -23,7 +24,7 @@ def upsample(input_layer, filters, skip_layer = None, kernel = def_kernel, norm 
         t0 = UpSampling2D()(t0)
     t0 = Conv2D(filters, kernel, strides=1, padding='same')(t0)
     if norm:
-        t0 = BatchNormalization()(t0)
+        t0 = InstanceNormalization()(t0)
     t0 = Dropout(0.5)(t0, training=True)
     t0 = LeakyReLU(0.2)(t0)
     if skip_layer is not None:
