@@ -10,11 +10,11 @@ from keras_contrib.layers import InstanceNormalization
 
 def_kernel = 4
 
-def downsample(input_layer, filters, kernel = def_kernel, dropout = 0.5, norm=True, strides=2):
-    t0 = Conv2D(filters, kernel, strides=strides, padding='same')(input_layer)
-    t0 = LeakyReLU(0.2)(t0)
+def downsample(input_layer, filters, kernel = def_kernel, dropout = 0.5, norm=True, strides=2, padding="same"):
+    t0 = Conv2D(filters, kernel, strides=strides, padding=padding)(input_layer)
     if norm:
         t0 = InstanceNormalization()(t0)
+    t0 = LeakyReLU(0.2)(t0)
     t0 = Dropout(dropout)(t0, training=True)
     return t0
 
@@ -25,8 +25,8 @@ def upsample(input_layer, filters, skip_layer = None, kernel = def_kernel, norm 
     t0 = Conv2D(filters, kernel, strides=1, padding='same')(t0)
     if norm:
         t0 = InstanceNormalization()(t0)
-    t0 = Dropout(0.5)(t0, training=True)
     t0 = LeakyReLU(0.2)(t0)
+    t0 = Dropout(0.5)(t0, training=True)
     if skip_layer is not None:
         t0 = Concatenate()([t0, skip_layer])
     return t0
@@ -54,19 +54,21 @@ class CNN(NN):
         # l = GaussianNoise(0.5)(inp)
         l = inp
         l = downsample(l, depth * 1, kernel=5, norm=False) #64
-        l2 = l
         l = downsample(l, depth * 2) #32
         l3 = l
         l = downsample(l, depth * 4) #16
         l4 = l
-        l = downsample(l, depth * 4) #8
+        l = downsample(l, depth * 8)
         l5 = l
-        l = downsample(l, depth * 4) #4
-        l = upsample(l, depth * 4, l5)
-        l = upsample(l, depth * 4, l4)
+        l = downsample(l, depth * 8)
+        l6 = l
+        l = downsample(l, depth * 8)
+        l = upsample(l, depth * 8, l6)
+        l = upsample(l, depth * 8, l5)
+        l = upsample(l, depth * 8, l4)
         l = upsample(l, depth * 4, l3)
-        l = upsample(l, depth * 4, l2)
         l = upsample(l, depth * 2)
+        l = upsample(l, depth * 1)
 
         l = Conv2D((1 if self.gray else 3), def_kernel, strides=1, padding='same')(l)
         output = Activation('tanh')(l)

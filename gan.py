@@ -28,23 +28,20 @@ class GAN(CNN):
         depth = self.dis_depth
 
         inp = Input((self.size, self.size, (1 if self.gray else 3) + 1))
-        d1 = cnn.downsample(inp, depth, norm=False)     # 32
-        d2 = cnn.downsample(d1, depth * 2)  # 16
-        d3 = cnn.downsample(d2, depth * 4)  # 8
-        d4 = cnn.downsample(d3, depth * 8)  # 4
-        d4 = cnn.downsample(d4, depth * 8)  # 2
+        d = cnn.downsample(inp, depth, norm=False)
+        d = cnn.downsample(d, depth * 2)
+        d = cnn.downsample(d, depth * 4)
+        d = cnn.downsample(d, depth * 8)
+        d = cnn.downsample(d, 1, strides=1, padding="valid")
 
-        m0 = Flatten()(d4)
+        o = Activation('sigmoid')(d)
 
-        o0 = Dense(1)(m0)
-        o1 = Activation('sigmoid')(o0)
-
-        self.D = Model(inp, o1)
+        self.D = Model(inp, o)
         if not silent:
             self.D.summary()
         return self.D
 
-    def train(self, epochs, batch=32, save = 150, label_flipping=0.1):
+    def train(self, epochs, batch=32, save = 150, save_network = 5000):
         self.load_data()
 
         if (batch % 2 != 0):
@@ -71,7 +68,8 @@ class GAN(CNN):
 
             self.combined.compile(
                 loss=['mae', 'binary_crossentropy'],
-                loss_weights=[20, 1],
+                loss_weights=[100, 1],
+                loss_weights=[50, 1],
                 optimizer=G_optimizer
             )
 
@@ -79,7 +77,7 @@ class GAN(CNN):
 
             self.D.trainable = True
             self.G.trainable = False
-            
+
             ssimg = Input((self.size, self.size, 1))
             ggimg = self.G(ssimg)
             ddd = self.D(Concatenate()([ggimg, ssimg]))
@@ -90,13 +88,14 @@ class GAN(CNN):
                 optimizer=D_optimizer,
                 metrics=['binary_accuracy']
             )
-            
+
             self.D.compile(
                 loss='binary_crossentropy',
                 optimizer=D_optimizer,
                 metrics=['binary_accuracy']
             )
 
+        out_shape = self.D.output_shape
 
         print(self.combinedRev.metrics_names, self.combined.metrics_names)
         for epoch in range(1, 1 + epochs):
@@ -108,14 +107,8 @@ class GAN(CNN):
             idxs = np.random.randint(0, self.sdata.shape[0], batch // 2)
             bad_inp = self.sdata[idxs]
 
-            if label_flipping is not None:
-                d_good = np.random.binomial(1, 1-label_flipping, (batch // 2,))
-                d_bad = np.random.binomial(1, label_flipping, (batch // 2,))
-            else:
-                d_good = np.ones((batch // 2,))
-                d_bad = np.zeros((batch // 2,))
-            d_good = np.reshape(d_good, (*d_good.shape, 1))
-            d_bad = np.reshape(d_bad, (*d_bad.shape, 1))
+            d_good = np.ones((batch // 2, *out_shape))
+            d_bad = np.zeros((batch // 2, *out_shape))
 
             d_lossg = self.D.train_on_batch(good_inp, d_good)
             d_lossb = self.combinedRev.train_on_batch(bad_inp, d_bad)
@@ -125,18 +118,23 @@ class GAN(CNN):
             idxs = np.random.randint(0, self.sdata.shape[0], batch)
             g_inp = self.sdata[idxs]
             g_real = self.ddata[idxs]
-            g_out = np.ones((batch, 1))
+            g_out = np.ones((batch, *out_shape))
             g_loss = self.combined.train_on_batch(g_inp, [g_real, g_out])
 
             print(f"{epoch}\tD: [loss: {d_loss[0]:.4f} binary_acc: {d_loss[1]:.2f}]\tG: [loss: {g_loss[0]:.2f} loss_mae: {g_loss[1]:.2f} loss_D: {g_loss[2]:.6f}]")
 
-            if epoch % save == 0 or epoch == epochs:
+            if epoch % save == 0:
                 self.show_img(epoch)
+            if epoch % save_network == 0:
+                self.save(epoch)
+        self.save(epochs)
 
+    def getTimeNow(self):
+        return datetime.now().strftime("%Y%m%d-%H%M%S")
 
-    def save(self):
-        timenow = datetime.now().strftime("%Y%m%d-%H%M%S")
-        self.show_img("-")
+    def save(self, epoch="-"):
+        self.show_img(epoch)
+        timenow = self.getTimeNow()
         self.G.save(f"../model_{timenow}_G.h5")
         self.D.save(f"../model_{timenow}_D.h5")
 
@@ -171,7 +169,7 @@ class GAN(CNN):
             for j in range(3):
                 hideTicks(axs[j,i])
         plt.subplots_adjust(wspace=0.02,hspace=0.02)
-        timenow = datetime.now().strftime("%Y%m%d-%H%M%S")
+        timenow = self.getTimeNow()
         fig.savefig(f"../gan_{epoch}_{timenow}.png", bbox_inches='tight')
         plt.close(fig)
 

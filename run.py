@@ -9,7 +9,7 @@ import gan
 import keras
 from keras_contrib.layers import InstanceNormalization
 import time
-g = gan.GAN(gray=False, size=128, dis_depth=64, gen_depth=128)
+g = gan.GAN(gray=False, size=128, dis_depth=64, gen_depth=64)
 
 g.generator(silent=True)
 g.discriminator(silent=True)
@@ -36,7 +36,7 @@ if len(sys.argv) > 1:
     time.sleep(1)
 
 try:
-    g.train(1000000, batch=2, save=100, label_flipping=None)
+    g.train(1000000, batch=8, save=100)
 finally:
     g.save()
 
