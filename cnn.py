@@ -5,8 +5,9 @@ from keras import Model
 from keras.layers import Dense, Conv2D, Conv2DTranspose
 from keras.layers import Activation, Dropout, Input, Concatenate
 from keras.layers import UpSampling2D, Reshape, Flatten, LeakyReLU
-from keras.layers import BatchNormalization, GaussianNoise
+from keras.layers import BatchNormalization, GaussianNoise, Lambda
 from keras_contrib.layers import InstanceNormalization
+import tensorflow as tf
 
 def_kernel = 4
 
@@ -18,11 +19,15 @@ def downsample(input_layer, filters, kernel = def_kernel, dropout = 0.5, norm=Tr
     t0 = Dropout(dropout)(t0, training=True)
     return t0
 
-def upsample(input_layer, filters, skip_layer = None, kernel = def_kernel, norm = True, upsample=True):
+def resize_like(input_tensor):
+    H, W = input_tensor.get_shape()[1], input_tensor.get_shape()[2]
+    return tf.image.resize_nearest_neighbor(input_tensor, [2*H.value, 2*W.value])
+
+def upsample(input_layer, filters, skip_layer = None, kernel = def_kernel, norm = True):
     t0 = input_layer
-    if upsample:
-        t0 = UpSampling2D()(t0)
-    t0 = Conv2D(filters, kernel, strides=1, padding='same')(t0)
+    # t0 = Lambda(resize_like)(t0)
+    # t0 = Conv2D(filters, kernel, padding='same', strides=1)(t0)
+    t0 = Conv2DTranspose(filters, kernel, padding='same', strides=2)(t0)
     if norm:
         t0 = InstanceNormalization()(t0)
     t0 = LeakyReLU(0.2)(t0)

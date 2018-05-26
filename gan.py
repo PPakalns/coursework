@@ -32,8 +32,7 @@ class GAN(CNN):
         d = cnn.downsample(d, depth * 2)
         d = cnn.downsample(d, depth * 4)
         d = cnn.downsample(d, depth * 8)
-        d = cnn.downsample(d, 1, strides=1, padding="valid")
-
+        d = Conv2D(1, 4, strides=1, padding="valid")(d)
         o = Activation('sigmoid')(d)
 
         self.D = Model(inp, o)
@@ -69,7 +68,6 @@ class GAN(CNN):
             self.combined.compile(
                 loss=['mae', 'binary_crossentropy'],
                 loss_weights=[100, 1],
-                loss_weights=[50, 1],
                 optimizer=G_optimizer
             )
 
@@ -95,7 +93,7 @@ class GAN(CNN):
                 metrics=['binary_accuracy']
             )
 
-        out_shape = self.D.output_shape
+        out_shape = (5, 5, 1)
 
         print(self.combinedRev.metrics_names, self.combined.metrics_names)
         for epoch in range(1, 1 + epochs):
