@@ -9,6 +9,8 @@ import gan
 import keras
 from keras_contrib.layers import InstanceNormalization
 import time
+import tensorflow as tf
+
 g = gan.GAN(gray=False, size=128, dis_depth=64, gen_depth=64)
 
 g.generator(silent=True)
@@ -36,7 +38,7 @@ if len(sys.argv) > 1:
     time.sleep(1)
 
 try:
-    g.train(1000000, batch=8, save=100)
+    g.train(1000000, batch=4, save=100, save_network = 7500)
 finally:
     g.save()
 

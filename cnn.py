@@ -25,12 +25,14 @@ def resize_like(input_tensor):
 
 def upsample(input_layer, filters, skip_layer = None, kernel = def_kernel, norm = True):
     t0 = input_layer
+    t0 = UpSampling2D()(t0)
     # t0 = Lambda(resize_like)(t0)
-    # t0 = Conv2D(filters, kernel, padding='same', strides=1)(t0)
-    t0 = Conv2DTranspose(filters, kernel, padding='same', strides=2)(t0)
+    t0 = Conv2D(filters, kernel, padding='same', strides=1)(t0)
+    # t0 = Conv2DTranspose(filters, kernel, padding='same', strides=2)(t0)
     if norm:
         t0 = InstanceNormalization()(t0)
-    t0 = LeakyReLU(0.2)(t0)
+    # t0 = LeakyReLU(0.2)(t0)
+    t0 = Activation('relu')(t0)
     t0 = Dropout(0.5)(t0, training=True)
     if skip_layer is not None:
         t0 = Concatenate()([t0, skip_layer])
@@ -72,8 +74,8 @@ class CNN(NN):
         l = upsample(l, depth * 8, l5)
         l = upsample(l, depth * 8, l4)
         l = upsample(l, depth * 4, l3)
-        l = upsample(l, depth * 2)
-        l = upsample(l, depth * 1)
+        l = upsample(l, depth * 2 * 2)
+        l = upsample(l, depth * 1 * 2)
 
         l = Conv2D((1 if self.gray else 3), def_kernel, strides=1, padding='same')(l)
         output = Activation('tanh')(l)

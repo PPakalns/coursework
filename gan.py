@@ -67,25 +67,13 @@ class GAN(CNN):
 
             self.combined.compile(
                 loss=['mae', 'binary_crossentropy'],
-                loss_weights=[100, 1],
+                loss_weights=[75, 1],
                 optimizer=G_optimizer
             )
 
             self.combined.summary()
 
             self.D.trainable = True
-            self.G.trainable = False
-
-            ssimg = Input((self.size, self.size, 1))
-            ggimg = self.G(ssimg)
-            ddd = self.D(Concatenate()([ggimg, ssimg]))
-            self.combinedRev = Model(inputs=ssimg, outputs=[ddd])
-
-            self.combinedRev.compile(
-                loss='binary_crossentropy',
-                optimizer=D_optimizer,
-                metrics=['binary_accuracy']
-            )
 
             self.D.compile(
                 loss='binary_crossentropy',
@@ -95,7 +83,7 @@ class GAN(CNN):
 
         out_shape = (5, 5, 1)
 
-        print(self.combinedRev.metrics_names, self.combined.metrics_names)
+        print(self.D.metrics_names, self.combined.metrics_names)
         for epoch in range(1, 1 + epochs):
 
             # Discriminator
@@ -103,14 +91,15 @@ class GAN(CNN):
             good_inp = np.concatenate([self.ddata[idxs], self.sdata[idxs]], axis=3)
 
             idxs = np.random.randint(0, self.sdata.shape[0], batch // 2)
-            bad_inp = self.sdata[idxs]
+            bad_inp = np.concatenate([self.G.predict(self.sdata[idxs]), self.sdata[idxs]], axis=3)
 
             d_good = np.ones((batch // 2, *out_shape))
             d_bad = np.zeros((batch // 2, *out_shape))
 
-            d_lossg = self.D.train_on_batch(good_inp, d_good)
-            d_lossb = self.combinedRev.train_on_batch(bad_inp, d_bad)
-            d_loss = [((d_lossg[x] + d_lossb[x]) / 2) for x in range(len(d_lossb))]
+            d_in = np.concatenate([good_inp, bad_inp], axis=0)
+            d_out = np.concatenate([d_good, d_bad], axis=0)
+
+            d_loss = self.D.train_on_batch(d_in, d_out)
 
             # Generator
             idxs = np.random.randint(0, self.sdata.shape[0], batch)
