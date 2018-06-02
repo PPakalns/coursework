@@ -11,19 +11,20 @@ import tensorflow as tf
 
 def_kernel = 4
 
-def downsample(input_layer, filters, kernel = def_kernel, dropout = 0.5, norm=True, strides=2, padding="same"):
+def downsample(input_layer, filters, kernel = def_kernel, dropout = None, norm=True, strides=2, padding="same"):
     t0 = Conv2D(filters, kernel, strides=strides, padding=padding)(input_layer)
     if norm:
         t0 = InstanceNormalization()(t0)
     t0 = LeakyReLU(0.2)(t0)
-    t0 = Dropout(dropout)(t0, training=True)
+    if dropout:
+        t0 = Dropout(dropout)(t0, training=True)
     return t0
 
 def resize_like(input_tensor):
     H, W = input_tensor.get_shape()[1], input_tensor.get_shape()[2]
     return tf.image.resize_nearest_neighbor(input_tensor, [2*H.value, 2*W.value])
 
-def upsample(input_layer, filters, skip_layer = None, kernel = def_kernel, norm = True):
+def upsample(input_layer, filters, skip_layer = None, dropout = None, kernel = def_kernel, norm = True):
     t0 = input_layer
     t0 = UpSampling2D()(t0)
     # t0 = Lambda(resize_like)(t0)
@@ -33,7 +34,8 @@ def upsample(input_layer, filters, skip_layer = None, kernel = def_kernel, norm 
         t0 = InstanceNormalization()(t0)
     # t0 = LeakyReLU(0.2)(t0)
     t0 = Activation('relu')(t0)
-    t0 = Dropout(0.5)(t0, training=True)
+    if dropout:
+        t0 = Dropout(dropout)(t0, training=True)
     if skip_layer is not None:
         t0 = Concatenate()([t0, skip_layer])
     return t0
@@ -65,17 +67,17 @@ class CNN(NN):
         l3 = l
         l = downsample(l, depth * 4) #16
         l4 = l
-        l = downsample(l, depth * 8)
+        l = downsample(l, depth * 8) #8
         l5 = l
-        l = downsample(l, depth * 8)
+        l = downsample(l, depth * 8) #4
         l6 = l
-        l = downsample(l, depth * 8)
-        l = upsample(l, depth * 8, l6)
-        l = upsample(l, depth * 8, l5)
+        l = downsample(l, depth * 8) #2
+        l = upsample(l, depth * 8, l6, dropout=0.5)
+        l = upsample(l, depth * 8, l5, dropout=0.5)
         l = upsample(l, depth * 8, l4)
         l = upsample(l, depth * 4, l3)
-        l = upsample(l, depth * 2 * 2)
-        l = upsample(l, depth * 1 * 2)
+        l = upsample(l, depth * 2)
+        l = upsample(l, depth * 1)
 
         l = Conv2D((1 if self.gray else 3), def_kernel, strides=1, padding='same')(l)
         output = Activation('tanh')(l)
