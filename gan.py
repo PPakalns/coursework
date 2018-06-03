@@ -5,6 +5,7 @@ from cnn import CNN
 import numpy as np
 from matplotlib import pyplot as plt
 from datetime import datetime
+from common import get_random_cut
 from keras import Model
 from keras.optimizers import Adam
 from keras.layers import Dense, Conv2D, Conv2DTranspose, LeakyReLU
@@ -82,17 +83,20 @@ class GAN(CNN):
                 metrics=['binary_accuracy']
             )
 
+        in_shape = self.ddata.shape
         out_shape = (self.size // 2**3, self.size // 2**3, 1)
 
         print(self.D.metrics_names, self.combined.metrics_names)
         for epoch in range(1, 1 + epochs):
+            rcut = get_random_cut(in_shape, self.size)
 
             # Discriminator
             idxs = np.random.randint(0, self.ddata.shape[0], batch // 2)
-            good_inp = np.concatenate([self.ddata[idxs], self.sdata[idxs]], axis=3)
+            good_inp = np.concatenate([rcut(self.ddata[idxs]), rcut(self.sdata[idxs])], axis=3)
 
             idxs = np.random.randint(0, self.sdata.shape[0], batch // 2)
-            bad_inp = np.concatenate([self.G.predict(self.sdata[idxs]), self.sdata[idxs]], axis=3)
+            sdata_inp = rcut(self.sdata[idxs])
+            bad_inp = np.concatenate([self.G.predict(sdata_inp), sdata_inp], axis=3)
 
             d_good = np.ones((batch // 2, *out_shape))
             d_bad = np.zeros((batch // 2, *out_shape))
@@ -104,8 +108,8 @@ class GAN(CNN):
 
             # Generator
             idxs = np.random.randint(0, self.sdata.shape[0], batch)
-            g_inp = self.sdata[idxs]
-            g_real = self.ddata[idxs]
+            g_inp = rcut(self.sdata[idxs])
+            g_real = rcut(self.ddata[idxs])
             g_out = np.ones((batch, *out_shape))
             g_loss = self.combined.train_on_batch(g_inp, [g_real, g_out])
 
@@ -130,9 +134,10 @@ class GAN(CNN):
     def show_img(self, epoch):
         cnt = 5
         idxs = np.random.randint(0, self.sdata.shape[0], cnt)
-        simg = self.sdata[idxs]
+        rcut = get_random_cut(self.sdata.shape, self.size)
+        simg = rcut(self.sdata[idxs])
         # pimg = simg # + np.random.normal(scale=0.5, size=simg.shape)
-        dimg = self.ddata[idxs]
+        dimg = rcut(self.ddata[idxs])
         gimg = self.G.predict(simg)
 
         # Rescale images 0 - 1
